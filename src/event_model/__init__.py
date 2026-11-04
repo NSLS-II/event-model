@@ -2253,13 +2253,8 @@ class ComposeEventPage:
                 )
             ):
                 raise EventModelValidationError(
-                    'These sets of keys must match (other than "STREAM:" keys):\n'
-                    "event['data'].keys(): {}\n"
-                    "event['timestamps'].keys(): {}\n"
-                    "descriptor['data_keys'].keys(): {}\n".format(
-                        data.keys(),
-                        timestamps.keys(),
-                        self.descriptor["data_keys"].keys(),
+                    _format_mismatched_keys(
+                        data, timestamps, self.descriptor["data_keys"]
                     )
                 )
             if set(filled) - set(data):
@@ -2309,6 +2304,24 @@ def keys_without_stream_keys(dictionary, descriptor_data_keys):
     ]
 
 
+def _format_mismatched_keys(
+    data: dict, timestamps: dict, descriptor_data_keys: dict
+) -> str:
+    """Highlight keys not shared by all three dictionaries, excluding streams."""
+    key_sets = [
+        set(keys_without_stream_keys(dictionary, descriptor_data_keys))
+        for dictionary in (data, timestamps, descriptor_data_keys)
+    ]
+    mismatched_keys = sorted(set.union(*key_sets) - set.intersection(*key_sets))
+    return (
+        'These sets of keys must match (other than "STREAM:" keys):\n'
+        f"Mismatched keys: {mismatched_keys}\n"
+        f"event['data'].keys(): {data.keys()}\n"
+        f"event['timestamps'].keys(): {timestamps.keys()}\n"
+        f"descriptor['data_keys'].keys(): {descriptor_data_keys.keys()}\n"
+    )
+
+
 @dataclass
 class ComposeEvent:
     descriptor: EventDescriptor
@@ -2356,13 +2369,8 @@ class ComposeEvent:
                 )
             ):
                 raise EventModelValidationError(
-                    'These sets of keys must match (other than "STREAM:" keys):\n'
-                    "event['data'].keys(): {}\n"
-                    "event['timestamps'].keys(): {}\n"
-                    "descriptor['data_keys'].keys(): {}\n".format(
-                        data.keys(),
-                        timestamps.keys(),
-                        self.descriptor["data_keys"].keys(),
+                    _format_mismatched_keys(
+                        data, timestamps, self.descriptor["data_keys"]
                     )
                 )
             if set(filled) - set(data):
