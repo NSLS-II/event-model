@@ -23,15 +23,19 @@ def descriptor_bundle():
 
 @pytest.mark.parametrize("page", [False, True])
 @pytest.mark.parametrize(
-    "data_fields,timestamp_fields",
+    "data_fields,timestamp_fields,mismatched",
     [
-        (("common",), ("zulu", "common", "alpha")),
-        (("zulu", "common", "alpha"), ("common",)),
-        (("common", "alpha"), ("common", "zulu")),
-        (("common",), ("common",)),
+        (("common",), ("zulu", "common", "alpha"), "['alpha', 'zulu']"),
+        (("zulu", "common", "alpha"), ("common",), "['alpha', 'zulu']"),
+        (("common", "alpha"), ("common", "zulu"), "['alpha', 'zulu']"),
+        (("common",), ("common",), "['alpha', 'zulu']"),
+        (("common", "zulu"), ("zulu", "common", "alpha"), "['alpha']"),
+        (("zulu", "common", "alpha"), ("alpha", "common"), "['zulu']"),
     ],
 )
-def test_compose_identifies_mismatched_keys(page, data_fields, timestamp_fields):
+def test_compose_identifies_mismatched_keys(
+    page, data_fields, timestamp_fields, mismatched
+):
     bundle = descriptor_bundle()
     compose = bundle.compose_event_page if page else bundle.compose_event
     value = [0] if page else 0
@@ -43,7 +47,7 @@ def test_compose_identifies_mismatched_keys(page, data_fields, timestamp_fields)
 
     assert str(exc.value).splitlines()[:2] == [
         'These sets of keys must match (other than "STREAM:" keys):',
-        "Mismatched keys: ['alpha', 'zulu']",
+        f"Mismatched keys: {mismatched}",
     ]
     # Failed validation must not consume an event sequence number.
     fields = ("zulu", "common", "alpha")
